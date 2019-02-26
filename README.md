@@ -1,4 +1,4 @@
-## Amazon S3 Crr Preexisting Objects
+## Amazon S3 CRR Preexisting Objects
 
 Trigger Cross-Region Replication of Pre-Existing Objects with S3 Inventory and Amazon EMR
 
