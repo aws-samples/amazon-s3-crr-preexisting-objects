@@ -154,9 +154,14 @@ if __name__ == "__main__":
         help='Date of the Inventory to query (e.g. "2019-02-24-04-00"')
     parser.add_argument('OUTPUT_PATH',  
         help='S3 Output location (e.g. "s3://crr-preexisting-demo-inventory/results/")')
-    parser.add_argument('-p', '--partitions', help='Spark repartition optimization', type=int, default=None)
-    parser.add_argument('--acls', help='Copies ACLs on S3 objects during the copy-in-place. ' +
-        'This involves extra API calls, so should only be used if ACLs are in place', action='store_true')
+    parser.add_argument('-p', '--partitions', 
+        help='Spark repartition optimization', 
+        type=int, 
+        default=None)
+    parser.add_argument('--acls', 
+        help='Copies ACLs on S3 objects during the copy-in-place. ' +
+            'This involves extra API calls, so should only be used if ACLs are in place', 
+        action='store_true')
 
     args = parser.parse_args()
 
