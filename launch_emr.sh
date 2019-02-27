@@ -1,9 +1,13 @@
 #!/bin/bash
 
+#####################################################
+# The environment variables are specific to the demo.
+# Populate the values below to match your setup.
+#
 # EMR cluster variables
-AWS_PROFILE=  # 'default'
-REGION= # 'us-east-1'
-SUBNET_ID= # 'subnet-12345678'
+AWS_PROFILE='default'
+REGION='us-east-1'
+SUBNET_ID='subnet-12345678'
 EMR_CLUSTER_NAME='CrrPreexistingDemo'
 INVENTORY_BUCKET='crr-preexisting-demo-inventory'
 MASTER_INSTANCE_TYPE='m4.xlarge'
@@ -16,19 +20,20 @@ GLUE_DATABASE_NAME='default'
 ATHENA_TABLE_NAME='crr_preexisting_demo'
 INVENTORY_DATE='2019-02-24-04-00'
 PARTITIONS='1'
+#####################################################
 
-# Create default EMR roles
+echo "Creating default EMR roles.."
 aws --profile $AWS_PROFILE emr create-default-roles
 
-# Copy files
+echo "Uploading bootstrap actions and steps to S3.."
 aws --profile $AWS_PROFILE s3 cp emr_scripts/bootstrap.sh s3://${INVENTORY_BUCKET}/emr/bootstrap.sh
 aws --profile $AWS_PROFILE s3 cp emr_scripts/step_0.sh s3://${INVENTORY_BUCKET}/emr/step_0.sh
 aws --profile $AWS_PROFILE s3 cp emr_scripts/copy_objects.py s3://${INVENTORY_BUCKET}/emr/copy_objects.py
 
-# Clear the Spark application's results table
+echo "Clearing results table.."
 aws --profile $AWS_PROFILE s3 rm s3://${INVENTORY_BUCKET}/results --recursive
 
-# Launch EMR cluster
+echo "Creating EMR cluster.."
 aws emr create-cluster \
   --profile $AWS_PROFILE \
   --applications Name=Spark Name=Hadoop \

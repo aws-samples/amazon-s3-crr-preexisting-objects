@@ -15,8 +15,6 @@
 # - CSV_RESULT
 
 from __future__ import print_function
-import findspark
-findspark.init()
 from pyspark.sql import SparkSession
 
 import sys
@@ -148,19 +146,19 @@ def copy_objects(spark, inventory_table, inventory_date, partitions, copy_acls):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('INVENTORY_TABLE',  
+    parser.add_argument('INVENTORY_TABLE',
         help='Name of the Inventory table in AWS Glue (e.g. "default.crr_preexisting_demo")')
-    parser.add_argument('INVENTORY_DATE',  
+    parser.add_argument('INVENTORY_DATE',
         help='Date of the Inventory to query (e.g. "2019-02-24-04-00"')
-    parser.add_argument('OUTPUT_PATH',  
+    parser.add_argument('OUTPUT_PATH',
         help='S3 Output location (e.g. "s3://crr-preexisting-demo-inventory/results/")')
-    parser.add_argument('-p', '--partitions', 
-        help='Spark repartition optimization', 
-        type=int, 
+    parser.add_argument('-p', '--partitions',
+        help='Spark repartition optimization',
+        type=int,
         default=None)
-    parser.add_argument('--acls', 
+    parser.add_argument('--acls',
         help='Copies ACLs on S3 objects during the copy-in-place. ' +
-            'This involves extra API calls, so should only be used if ACLs are in place', 
+            'This involves extra API calls, so should only be used if ACLs are in place',
         action='store_true')
 
     args = parser.parse_args()
