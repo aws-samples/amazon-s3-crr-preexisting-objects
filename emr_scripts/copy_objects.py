@@ -15,12 +15,15 @@
 # - CSV_RESULT
 
 from __future__ import print_function
+import findspark
+findspark.init()
 from pyspark.sql import SparkSession
 
 import sys
 import boto3
 import datetime
 import logging
+import argparse
 
 
 runtime = datetime.datetime.utcnow().isoformat()
@@ -55,7 +58,7 @@ class ObjectUtil:
 
         return storage_class, metadata, sse_type, last_modified
 
-    def copy_object(self, bucket, key):
+    def copy_object(self, bucket, key, copy_acls):
         dest_bucket = self._s3.Bucket(bucket)
         dest_obj = dest_bucket.Object(key)
 
@@ -69,12 +72,13 @@ class ObjectUtil:
         metadata['forcedreplication'] = runtime
 
         # Get and copy the current ACL
-        src_acl = src_obj.Acl()
-        src_acl.load()
-        dest_acl = {
-            'Grants': src_acl.grants,
-            'Owner': src_acl.owner
-        }
+        if copy_acls:
+            src_acl = src_obj.Acl()
+            src_acl.load()
+            dest_acl = {
+                'Grants': src_acl.grants,
+                'Owner': src_acl.owner
+            }
 
         params = {
             'CopySource': {
@@ -97,7 +101,8 @@ class ObjectUtil:
         result = dest_obj.copy_from(**params)
 
         # Put the ACL back on the Object
-        dest_obj.Acl().put(AccessControlPolicy=dest_acl)
+        if copy_acls:
+            dest_obj.Acl().put(AccessControlPolicy=dest_acl)
 
         return {
             'CopyInPlace': 'TRUE',
@@ -105,7 +110,7 @@ class ObjectUtil:
         }
 
 
-def copy_rows(rows):
+def copy_rows(rows, copy_acls):
     objectutil = ObjectUtil()
     results = []
 
@@ -113,14 +118,14 @@ def copy_rows(rows):
         bucket = str(row['bucket']).strip('"')
         key = str(row['key']).strip('"')
 
-        result = objectutil.copy_object(bucket, key)
+        result = objectutil.copy_object(bucket, key, copy_acls)
         results.append(
             [bucket, key, result['CopyInPlace'], result['LastModified']])
 
     return results
 
 
-def copy_objects(spark, inventory_table, inventory_date, partitions):
+def copy_objects(spark, inventory_table, inventory_date, partitions, copy_acls):
     query = """
         SELECT bucket, key
         FROM {}
@@ -138,25 +143,28 @@ def copy_objects(spark, inventory_table, inventory_date, partitions):
         print('Repartitioning to {}'.format(partitions))
         crr_failed = crr_failed.repartition(partitions)
 
-    return crr_failed.rdd.mapPartitions(copy_rows)
+    return crr_failed.rdd.mapPartitions(lambda row: copy_rows(row, copy_acls))
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print('Usage: spark-submit {} [INVENTORY_TABLE] [INVENTORY_DATE] [OUTPUT_PATH] [PARITIONS]'.format(sys.argv[0]))
-        print('Example:')
-        print('')
-        print('spark-submit {} default.crr_preexisting_demo 2019-02-24-04-00 s3://crr-preexisting-demo-inventory/results/ 40'.format(sys.argv[0]))
-        sys.exit(-1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('INVENTORY_TABLE',  
+        help='Name of the Inventory table in AWS Glue (e.g. "default.crr_preexisting_demo")')
+    parser.add_argument('INVENTORY_DATE',  
+        help='Date of the Inventory to query (e.g. "2019-02-24-04-00"')
+    parser.add_argument('OUTPUT_PATH',  
+        help='S3 Output location (e.g. "s3://crr-preexisting-demo-inventory/results/")')
+    parser.add_argument('-p', '--partitions', help='Spark repartition optimization', type=int, default=None)
+    parser.add_argument('--acls', help='Copies ACLs on S3 objects during the copy-in-place. ' +
+        'This involves extra API calls, so should only be used if ACLs are in place', action='store_true')
 
-    inventory_table = sys.argv[1]
-    inventory_date = sys.argv[2]
-    output_path = sys.argv[3]
+    args = parser.parse_args()
 
-    if len(sys.argv) > 4:
-        partitions = int(sys.argv[4])
-    else:
-        partitions = None
+    inventory_table = args.INVENTORY_TABLE
+    inventory_date = args.INVENTORY_DATE
+    output_path = args.OUTPUT_PATH
+    partitions = args.partitions
+    acls = args.acls
 
     spark = SparkSession \
         .builder \
@@ -164,7 +172,7 @@ if __name__ == "__main__":
         .enableHiveSupport() \
         .getOrCreate()
 
-    copied_objects = copy_objects(spark, inventory_table, inventory_date, partitions)
+    copied_objects = copy_objects(spark, inventory_table, inventory_date, partitions, acls)
     copied_objects \
         .map(lambda x: ','.join(x)) \
         .saveAsTextFile(output_path)
