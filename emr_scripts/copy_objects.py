@@ -100,7 +100,8 @@ class ObjectUtil:
             params['SSEKMSKeyId'] = kms_key
 
         # Copy the S3 Object over the top of itself, 
-        # with the Storage Class, updated Metadata, and Server Side Encryption
+        # with the Storage Class, updated Metadata, 
+        # and Server Side Encryption
         result = dest_obj.copy_from(**params)
 
         # Put the ACL back on the Object
