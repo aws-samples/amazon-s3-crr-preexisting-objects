@@ -63,7 +63,8 @@ class ObjectUtil:
         src_bucket = self._s3.Bucket(bucket)
         src_obj = src_bucket.Object(key)
 
-        # Get the S3 Object's Storage Class, Metadata, and Server Side Encryption
+        # Get the S3 Object's Storage Class, Metadata, 
+        # and Server Side Encryption
         storage_class, metadata, sse_type, last_modified = \
             self._get_object_attributes(src_obj)
 
