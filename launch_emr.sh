@@ -35,6 +35,7 @@ aws --profile $AWS_PROFILE s3 rm s3://${INVENTORY_BUCKET}/results --recursive
 
 echo "Creating EMR cluster.."
 aws emr create-cluster \
+  --auto-terminate \
   --profile $AWS_PROFILE \
   --applications Name=Spark Name=Hadoop \
   --name $EMR_CLUSTER_NAME \
