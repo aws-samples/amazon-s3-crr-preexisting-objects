@@ -9,6 +9,8 @@ AWS_PROFILE='default'
 REGION='us-east-1'
 SUBNET_ID='subnet-12345678'
 EMR_CLUSTER_NAME='CrrPreexistingDemo'
+# NOTE: The Spark application stores its results in the inventory bucket.
+#       This script clears the results on each run using s3 rm --recursive.
 INVENTORY_BUCKET='crr-preexisting-demo-inventory'
 MASTER_INSTANCE_TYPE='m4.xlarge'
 CORE_INSTANCE_TYPE='m4.2xlarge'
