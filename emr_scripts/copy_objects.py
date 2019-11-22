@@ -16,6 +16,7 @@
 
 from __future__ import print_function
 from pyspark.sql import SparkSession
+from botocore.exceptions import ClientError
 
 import sys
 import boto3
@@ -63,7 +64,7 @@ class ObjectUtil:
         src_bucket = self._s3.Bucket(bucket)
         src_obj = src_bucket.Object(key)
 
-        # Get the S3 Object's Storage Class, Metadata, 
+        # Get the S3 Object's Storage Class, Metadata,
         # and Server Side Encryption
         storage_class, metadata, sse_type, last_modified = \
             self._get_object_attributes(src_obj)
@@ -99,8 +100,8 @@ class ObjectUtil:
             params['ServerSideEncryption'] = 'aws:kms'
             params['SSEKMSKeyId'] = kms_key
 
-        # Copy the S3 Object over the top of itself, 
-        # with the Storage Class, updated Metadata, 
+        # Copy the S3 Object over the top of itself,
+        # with the Storage Class, updated Metadata,
         # and Server Side Encryption
         result = dest_obj.copy_from(**params)
 
@@ -122,7 +123,16 @@ def copy_rows(rows, copy_acls):
         bucket = str(row['bucket']).strip('"')
         key = str(row['key']).strip('"')
 
-        result = objectutil.copy_object(bucket, key, copy_acls)
+        try:
+            result = objectutil.copy_object(bucket, key, copy_acls)
+
+        # Catch boto3 errors during the copy
+        except ClientError as e:
+            result = {
+                'CopyInPlace': 'FALSE',
+                'LastModified': None
+            }
+
         results.append(
             [bucket, key, result['CopyInPlace'], result['LastModified']])
 
